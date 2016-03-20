@@ -3,6 +3,7 @@ import getopt, sys, re, os
 from xml.dom.minidom import parseString
 from os.path import isfile, isdir
 from os import listdir
+from subprocess import call
 
 VERSION='0.1'
 
@@ -131,6 +132,7 @@ class VizOozie(object):
         outputFile = open(out_file, 'w+')
         outputFile.write(str(output))
         outputFile.close()
+        call(["dot", "-Tsvg", out_file, "-o", os.path.splitext(out_file)[0]])
     
 def main():
     vizoozie = VizOozie()
