@@ -7,6 +7,9 @@ from subprocess import call
 
 VERSION='0.1'
 
+def sText(text):
+    return text.replace('-', '_')       
+
 class VizOozie(object):
     
     properties = {}
@@ -53,18 +56,31 @@ class VizOozie(object):
         output = '\n' + "start -> " + to.replace('-', '_') + ";\n"
         return output
 
+    def getFirstElementChildNode(self, node):
+        for aNode in node.childNodes:
+            if aNode.nodeType == aNode.ELEMENT_NODE:
+                return aNode
+        return None     
+
     def processAction(self, doc):
         output = ''
         for node in doc.getElementsByTagName("action"):
             name = self.getName(node)
+            action_node = self.getFirstElementChildNode(node)
             color = "white"
             for key, value in self.properties.iteritems():
                 if len(node.getElementsByTagName(key)) != 0:
                     color = value
                     break 
-            output += '\n'+name.replace('-', '_') + " [shape=box,style=filled,color=" + color + "];\n"
-            output += '\n'+name.replace('-', '_') + " -> " + self.getOKTo(node).replace('-', '_') + ";\n"
-            output += '\n'+name.replace('-', '_') + " -> " + self.getErrorTo(node).replace('-', '_') + "[style=dotted,fontsize=10];\n"
+            if action_node.tagName == "sub-workflow":
+                url = self.getFirstElementChildNode(action_node).childNodes[0].data
+                url = url.replace("${subworkflowPath}", "")
+                url = re.sub('.xml$', '.svg', url)
+                output += '\n'+sText(name) + " [URL=\""+url+"\",shape=box,style=filled,color=" + color + "];\n"
+            else:
+                output += '\n'+sText(name) + " [shape=box,style=filled,color=" + color + "];\n"
+            output += '\n'+sText(name) + " -> " + sText(self.getOKTo(node)) + ";\n"
+            output += '\n'+sText(name) + " -> " + sText(self.getErrorTo(node)) + "[style=dotted,fontsize=10];\n"
         return output
     
     def processFork(self, doc):
@@ -122,10 +138,10 @@ class VizOozie(object):
         output += self.processCloseTag()
         return output
 
-    def processWorkflow(self, in_file, out_file):
+    def processWorkflow(self, in_file, out_file, relative_name):
         inputFile = open(in_file, 'r')    
         input_str = inputFile.read()
-        output = self.convertWorkflowXMLToDOT(input_str, in_file)
+        output = self.convertWorkflowXMLToDOT(input_str, relative_name)
         out_file_dirname = os.path.dirname(out_file)
         if not os.path.exists(out_file_dirname):
             os.makedirs(out_file_dirname)
@@ -149,7 +165,7 @@ def main():
                 if file.endswith(".xml"):
                     in_file = os.path.realpath(os.path.join(root,file))
                     out_file = os.path.splitext(in_file.replace(in_base_dir, out_base_dir))[0] + ".dot"
-                    vizoozie.processWorkflow(in_file, out_file)
+                    vizoozie.processWorkflow(in_file, out_file, in_file.replace(in_base_dir, ""))
     
 if __name__ == "__main__":
     main()
