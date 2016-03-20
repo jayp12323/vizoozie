@@ -132,7 +132,7 @@ class VizOozie(object):
         outputFile = open(out_file, 'w+')
         outputFile.write(str(output))
         outputFile.close()
-        call(["dot", "-Tsvg", out_file, "-o", os.path.splitext(out_file)[0]])
+        call(["dot", "-Tsvg", out_file, "-o", os.path.splitext(out_file)[0] + ".svg"])
     
 def main():
     vizoozie = VizOozie()
