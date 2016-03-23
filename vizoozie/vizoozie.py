@@ -113,11 +113,11 @@ class VizOozie(object):
             for case in switch.getElementsByTagName("case"):
                 to = case.getAttribute("to")
                 caseValue = case.childNodes[0].nodeValue.replace('"', '')
-                output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + "[style=bold,label=\"" + caseValue + "\",fontsize=20];\n"
+                output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + "[style=bold,fontsize=20];\n"
             
             default = switch.getElementsByTagName("default")[0]
             to = default.getAttribute("to")
-            output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + "[style=dotted,label=\"default\",fontsize=20];\n"
+            output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + "[style=dotted,fontsize=20];\n"
         return output
 
 
@@ -129,6 +129,9 @@ class VizOozie(object):
     def convertWorkflowXMLToDOT(self, input_str, name):
         self.loadProperties()
         doc = parseString(input_str)
+
+        if doc.getElementsByTagName("workflow-app").length == 0 : return None
+
         output = self.processHeader(name)
         output += self.processStart(doc)
         output += self.processAction(doc)
@@ -142,6 +145,7 @@ class VizOozie(object):
         inputFile = open(in_file, 'r')    
         input_str = inputFile.read()
         output = self.convertWorkflowXMLToDOT(input_str, relative_name)
+        if output == None : return
         out_file_dirname = os.path.dirname(out_file)
         if not os.path.exists(out_file_dirname):
             os.makedirs(out_file_dirname)
