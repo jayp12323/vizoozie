@@ -5,37 +5,41 @@ from os.path import isfile, isdir
 from os import listdir
 from subprocess import call
 
-VERSION='0.1'
+VERSION = '0.1'
+
 
 def sText(text):
-    return text.replace('-', '_')       
+    return text.replace('-', '_')
+
 
 class VizOozie(object):
-    
     properties = {}
-    
+
     def loadProperties(self):
-        with open("vizoozie/vizoozie.properties") as f:
-            for line in f:
-                key, val = line.split('=')
-                self.properties[key] = val
-    
+        try:
+            with open("vizoozie/vizoozie.properties") as f:
+                for line in f:
+                    key, val = line.split('=')
+                    self.properties[key] = val
+        except:
+            pass
+
     def getName(self, node):
         attr = self.getAttribute(node, "name")
         return attr
-    
+
     def getTo(self, node):
         attr = self.getAttribute(node, "to")
         return attr
-    
+
     def getAttribute(self, node, attributeName):
         attr = node.getAttribute(attributeName)
         return attr
-    
+
     def getOK(self, node):
         ok = node.getElementsByTagName("ok")[0]
         return ok
-    
+
     def getError(self, node):
         return node.getElementsByTagName("error")[0]
 
@@ -44,7 +48,7 @@ class VizOozie(object):
 
     def getErrorTo(self, node):
         return self.getTo(self.getError(node))
-    
+
     def processHeader(self, name):
         output = "digraph{\nsize = \"8,8\";ratio=fill;node[fontsize=24];labelloc=\"t\";label=\"" + name + "\";\nsubgraph{\n"
         return output
@@ -60,7 +64,7 @@ class VizOozie(object):
         for aNode in node.childNodes:
             if aNode.nodeType == aNode.ELEMENT_NODE:
                 return aNode
-        return None     
+        return None
 
     def processAction(self, doc):
         output = ''
@@ -68,21 +72,21 @@ class VizOozie(object):
             name = self.getName(node)
             action_node = self.getFirstElementChildNode(node)
             color = "white"
-            for key, value in self.properties.iteritems():
-                if len(node.getElementsByTagName(key)) != 0:
-                    color = value
-                    break 
+            # for key, value in self.properties.iteritems():
+            #     if len(node.getElementsByTagName(key)) != 0:
+            #         color = value
+            #         break
             if action_node.tagName == "sub-workflow":
                 url = self.getFirstElementChildNode(action_node).childNodes[0].data
                 url = url.replace("${subworkflowPath}", "")
                 url = re.sub('.xml$', '.svg', url)
-                output += '\n'+sText(name) + " [URL=\""+url+"\",shape=box,style=filled,color=" + color + "];\n"
+                output += '\n' + sText(name) + " [URL=\"" + url + "\",shape=box,style=filled,color=" + color + "];\n"
             else:
-                output += '\n'+sText(name) + " [shape=box,style=filled,color=" + color + "];\n"
-            output += '\n'+sText(name) + " -> " + sText(self.getOKTo(node)) + ";\n"
-            output += '\n'+sText(name) + " -> " + sText(self.getErrorTo(node)) + "[style=dotted,fontsize=10];\n"
+                output += '\n' + sText(name) + " [shape=box,style=filled,color=" + color + "];\n"
+            output += '\n' + sText(name) + " -> " + sText(self.getOKTo(node)) + ";\n"
+            output += '\n' + sText(name) + " -> " + sText(self.getErrorTo(node)) + "[style=dotted,fontsize=10];\n"
         return output
-    
+
     def processFork(self, doc):
         output = ''
         for node in doc.getElementsByTagName("fork"):
@@ -93,7 +97,6 @@ class VizOozie(object):
                 output += '\n' + name.replace('-', '_') + " -> " + start.replace('-', '_') + ";\n"
         return output
 
-
     def processJoin(self, doc):
         output = ''
         for node in doc.getElementsByTagName("join"):
@@ -102,7 +105,6 @@ class VizOozie(object):
             output += '\n' + name.replace('-', '_') + " [shape=octagon];\n"
             output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + ";\n"
         return output
-
 
     def processDecision(self, doc):
         output = ''
@@ -114,23 +116,21 @@ class VizOozie(object):
                 to = case.getAttribute("to")
                 caseValue = case.childNodes[0].nodeValue.replace('"', '')
                 output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + "[style=bold,fontsize=20];\n"
-            
+
             default = switch.getElementsByTagName("default")[0]
             to = default.getAttribute("to")
             output += '\n' + name.replace('-', '_') + " -> " + to.replace('-', '_') + "[style=dotted,fontsize=20];\n"
         return output
 
-
     def processCloseTag(self):
-        output = '\n' + "}"+'\n' + "}"
+        output = '\n' + "}" + '\n' + "}"
         return output
 
-
-    def convertWorkflowXMLToDOT(self, input_str, name):
+    def convertWorkflowXMLToDOT(self, input_str, name=""):
         self.loadProperties()
         doc = parseString(input_str)
 
-        if doc.getElementsByTagName("workflow-app").length == 0 : return None
+        if doc.getElementsByTagName("workflow-app").length == 0: return None
 
         output = self.processHeader(name)
         output += self.processStart(doc)
@@ -142,34 +142,36 @@ class VizOozie(object):
         return output
 
     def processWorkflow(self, in_file, out_file, relative_name):
-        inputFile = open(in_file, 'r')    
+        inputFile = open(in_file, 'r')
         input_str = inputFile.read()
         output = self.convertWorkflowXMLToDOT(input_str, relative_name)
-        if output == None : return
+        if output == None: return
         out_file_dirname = os.path.dirname(out_file)
         if not os.path.exists(out_file_dirname):
             os.makedirs(out_file_dirname)
-        outputFile = open(out_file, 'w+')
+        outputFile = open(out_file + '.dot', 'w+')
         outputFile.write(str(output))
         outputFile.close()
-        call(["dot", "-Tsvg", out_file, "-o", os.path.splitext(out_file)[0] + ".svg"])
-    
+        call(["dot", "-Tpdf", out_file + '.dot', "-o", os.path.splitext(out_file)[0] + ".pdf"])
+
+
 def main():
     vizoozie = VizOozie()
     if len(sys.argv) < 3:
         print("Usage: python vizoozie.py <Input Oozie workflow xml file name> <output dot file name>")
         exit(1)
-    if isfile(sys.argv[1]) :
-        vizoozie.processWorkflow(sys.argv[1], sys.argv[2])
+    if isfile(sys.argv[1]):
+        vizoozie.processWorkflow(sys.argv[1], sys.argv[1], "")
     elif isdir(sys.argv[1]):
         in_base_dir = os.path.realpath(sys.argv[1])
         out_base_dir = os.path.realpath(sys.argv[2])
         for root, dirs, files in os.walk(sys.argv[1]):
             for file in files:
                 if file.endswith(".xml"):
-                    in_file = os.path.realpath(os.path.join(root,file))
+                    in_file = os.path.realpath(os.path.join(root, file))
                     out_file = os.path.splitext(in_file.replace(in_base_dir, out_base_dir))[0] + ".dot"
                     vizoozie.processWorkflow(in_file, out_file, in_file.replace(in_base_dir, ""))
-    
+
+
 if __name__ == "__main__":
     main()
