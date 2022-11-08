@@ -157,8 +157,8 @@ class VizOozie(object):
 
 def main():
     vizoozie = VizOozie()
-    if len(sys.argv) < 3:
-        print("Usage: python vizoozie.py <Input Oozie workflow xml file name> <output dot file name>")
+    if len(sys.argv) < 2:
+        print("Usage: python vizoozie.py <Input Oozie workflow xml file name> ")
         exit(1)
     if isfile(sys.argv[1]):
         vizoozie.processWorkflow(sys.argv[1], sys.argv[1], "")
